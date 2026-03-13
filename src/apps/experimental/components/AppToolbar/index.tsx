@@ -6,7 +6,6 @@ import { appRouter, PUBLIC_PATHS } from 'components/router/appRouter';
 import AppToolbar from 'components/toolbar/AppToolbar';
 import ServerButton from 'components/toolbar/ServerButton';
 
-import RemotePlayButton from './RemotePlayButton';
 import SyncPlayButton from './SyncPlayButton';
 import SearchButton from './SearchButton';
 import UserViewNav from './userViews/UserViewNav';
@@ -38,7 +37,6 @@ const ExperimentalAppToolbar: FC<AppToolbarProps> = ({
             buttons={!isPublicPath && (
                 <>
                     <SyncPlayButton />
-                    <RemotePlayButton />
                     <SearchButton />
                 </>
             )}
