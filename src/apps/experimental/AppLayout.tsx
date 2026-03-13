@@ -40,6 +40,7 @@ export const Component = () => {
                                 width: '100%',
                                 ml: 0
                             }}
+                            style={{ transitionProperty: 'box-shadow, background-color' }}
                         >
                             <AppToolbar
                                 isDrawerAvailable={!isMediumScreen && isDrawerAvailable}
