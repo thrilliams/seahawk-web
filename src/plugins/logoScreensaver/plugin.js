@@ -1,4 +1,4 @@
-import icon from '../../assets/branding/icon-transparent.png';
+import icon from '../../branding/icon-transparent.png';
 
 import { PluginType } from '../../types/plugin.ts';
 import { randomInt } from '../../utils/number.ts';

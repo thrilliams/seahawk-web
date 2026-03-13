@@ -6,7 +6,7 @@ import React from 'react';
 import { useSystemInfo } from 'hooks/useSystemInfo';
 import ListItemLink from 'components/ListItemLink';
 
-import appIcon from '../../../../assets/branding/icon-transparent.png';
+import appIcon from '../../../../branding/icon-transparent.png';
 
 const DrawerHeaderLink = () => {
     const { data: systemInfo } = useSystemInfo();

@@ -87,7 +87,7 @@ const config = {
                 'robots.txt',
                 {
                     from: 'touchicon*.png',
-                    context: path.resolve(__dirname, 'src/assets/branding/favicons'),
+                    context: path.resolve(__dirname, 'src/branding/favicons'),
                     to: 'favicons'
                 },
                 ...Assets.map(asset => {
