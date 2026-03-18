@@ -1,4 +1,4 @@
-import banner from '../../branding/icon-transparent.png';
+import banner from '../../branding/banner-light.png';
 import Button from '@mui/material/Button/Button';
 import React, { FC } from 'react';
 import { Link } from 'react-router-dom';
