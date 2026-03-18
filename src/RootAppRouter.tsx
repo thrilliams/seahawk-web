@@ -19,7 +19,8 @@ import appTheme from 'themes/themes';
 import { ThemeStorageManager } from 'themes/themeStorageManager';
 
 const layoutMode = localStorage.getItem('layout');
-const isExperimentalLayout = layoutMode === 'experimental';
+// default to experimental layout
+const isExperimentalLayout = layoutMode !== 'desktop';
 
 const router = createHashRouter([
     {
