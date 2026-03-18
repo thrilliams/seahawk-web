@@ -38,7 +38,8 @@ export const Component = () => {
                             position='fixed'
                             sx={{
                                 width: '100%',
-                                ml: 0
+                                ml: 0,
+                                transitionProperty: 'box-shadow, background-color'
                             }}
                         >
                             <AppToolbar
