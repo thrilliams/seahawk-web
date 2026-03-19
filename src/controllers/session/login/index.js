@@ -151,7 +151,7 @@ function loadUserList(context, apiClient, users) {
             }
         }
 
-        const cardBoxCssClass = 'cardBox cardBox-bottompadded';
+        const cardBoxCssClass = 'cardBox cardBox-bottompadded userCardBox';
         html += '<button type="button" class="' + cssClass + '">';
         html += '<div class="' + cardBoxCssClass + '">';
         html += '<div class="cardScalable">';

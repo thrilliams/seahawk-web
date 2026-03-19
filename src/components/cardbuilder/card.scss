@@ -233,7 +233,7 @@ button::-moz-focus-inner {
     position: relative; // For centering the cardImageIcon
 }
 
-.cardBox:not(.visualCardBox) .cardPadder {
+.cardBox:not(.visualCardBox):not(.userCardBox) .cardPadder {
     border-radius: 0.2em;
     background-color: #242424;
 }
@@ -243,7 +243,7 @@ button::-moz-focus-inner {
 }
 
 .cardContent-shadow,
-.cardBox:not(.visualCardBox) .cardPadder {
+.cardBox:not(.visualCardBox):not(.userCardBox) .cardPadder {
     box-shadow: 0 0.0725em 0.29em 0 rgba(0, 0, 0, 0.37);
 }
 
