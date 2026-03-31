@@ -193,9 +193,9 @@ function loadTranslation(translations, lang) {
             return;
         }
 
-        const url = filtered[0].path;
+        const url = filtered[0].path.slice(0, -5);
 
-        import(/* webpackChunkName: "[request]" */ `../../strings/${url}`).then((fileContent) => {
+        import(/* webpackChunkName: "[request]" */ `../../strings/${url}.json`).then((fileContent) => {
             resolve(fileContent);
         }).catch(() => {
             resolve({});

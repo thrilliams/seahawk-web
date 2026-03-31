@@ -94,7 +94,7 @@ class PluginManager {
                 });
             } else {
                 console.debug(`Loading plugin (via dynamic import): ${pluginSpec}`);
-                const pluginResult = await import(/* webpackChunkName: "[request]" */ `../plugins/${pluginSpec}`);
+                const pluginResult = await import(/* webpackChunkName: "[request]" */ `../plugins/${pluginSpec}.js`);
                 plugin = new pluginResult.default;
             }
         } else if (pluginSpec.then) {

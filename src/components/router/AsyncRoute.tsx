@@ -15,13 +15,25 @@ export interface AsyncRoute {
 }
 
 const importRoute = (page: string, type: AppType) => {
-    switch (type) {
-        case AppType.Dashboard:
-            return import(/* webpackChunkName: "[request]" */ `../../apps/dashboard/routes/${page}`);
-        case AppType.Experimental:
-            return import(/* webpackChunkName: "[request]" */ `../../apps/experimental/routes/${page}`);
-        case AppType.Stable:
-            return import(/* webpackChunkName: "[request]" */ `../../apps/stable/routes/${page}`);
+    try {
+        switch (type) {
+            case AppType.Dashboard:
+                return import(/* webpackChunkName: "[request]" */ `../../apps/dashboard/routes/${page}.tsx`);
+            case AppType.Experimental:
+                return import(/* webpackChunkName: "[request]" */ `../../apps/experimental/routes/${page}.tsx`);
+            case AppType.Stable:
+                return import(/* webpackChunkName: "[request]" */ `../../apps/stable/routes/${page}.tsx`);
+        }
+    // eslint-disable-next-line sonarjs/no-ignored-exceptions, @typescript-eslint/no-unused-vars
+    } catch (_) {
+        switch (type) {
+            case AppType.Dashboard:
+                return import(/* webpackChunkName: "[request]" */ `../../apps/dashboard/routes/${page}/index.tsx`);
+            case AppType.Experimental:
+                return import(/* webpackChunkName: "[request]" */ `../../apps/experimental/routes/${page}/index.tsx`);
+            case AppType.Stable:
+                return import(/* webpackChunkName: "[request]" */ `../../apps/stable/routes/${page}/index.tsx`);
+        }
     }
 };
 

@@ -49,7 +49,7 @@ class HomeView extends TabbedView {
         }
 
         const instance = this;
-        return import(/* webpackChunkName: "[request]" */ `../controllers/${depends}`).then(({ default: ControllerFactory }) => {
+        return import(/* webpackChunkName: "[request]" */ `../controllers/${depends}.js`).then(({ default: ControllerFactory }) => {
             let controller = instance.tabControllers[index];
 
             if (!controller) {
