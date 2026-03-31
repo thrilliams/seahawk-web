@@ -2,6 +2,7 @@ import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
 import Favorite from '@mui/icons-material/Favorite';
+import LibraryAdd from '@mui/icons-material/LibraryAdd';
 import Button from '@mui/material/Button/Button';
 import { Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -120,6 +121,19 @@ const UserViewNav = () => {
                     {view.Name}
                 </Button>
             ))}
+
+            <Button
+                variant='text'
+                color={'inherit'}
+                startIcon={<LibraryAdd />}
+                component={Link}
+                // eslint-disable-next-line sonarjs/no-clear-text-protocols
+                to={'http://seerr.seahawk.aethre.co'}
+                target='_blank'
+            >
+                Requests
+            </Button>
+
             {overflowViews && overflowViews.length > 0 && (
                 <>
                     <Button
