@@ -155,10 +155,9 @@
   ],
   "scripts": {
     "start": "npm run serve",
-    "serve": "webpack serve --config webpack.dev.js",
-    "build:analyze": "cross-env NODE_ENV=\"production\" webpack --config webpack.analyze.js",
-    "build:development": "webpack --config webpack.dev.js",
-    "build:production": "cross-env NODE_ENV=\"production\" node esbuild.cjs",
+    "serve": "node esbuild.dev.cjs",
+    "build:development": "node esbuild.dev.cjs",
+    "build:production": "cross-env NODE_ENV=\"production\" node esbuild.prod.cjs",
     "build:check": "tsc --noEmit",
     "build:es-check": "npm run build:production && npm run escheck",
     "escheck": "es-check",

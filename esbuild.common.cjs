@@ -1,4 +1,4 @@
-const { build } = require('esbuild');
+const { context } = require('esbuild');
 const { globSync } = require('fast-glob');
 const { resolve } = require('path');
 const { sassPlugin } = require('esbuild-sass-plugin');
@@ -7,9 +7,10 @@ const { copy } = require('esbuild-plugin-copy');
 const packageJson = require('./package.json');
 const { definePlugin } = require('esbuild-plugin-define');
 
+const DEV_MODE = process.env.NODE_ENV !== 'production';
+
 const STRIP_TILDE_PLUGIN = {
     name: 'strip-tilde',
-    // eslint-disable-next-line @typescript-eslint/no-shadow
     setup(build) {
         // eslint-disable-next-line sonarjs/slow-regex
         build.onResolve({ filter: /~.*\.(woff2|ttf)$/ }, (args) => {
@@ -46,9 +47,9 @@ const HTML_PLUGIN = htmlPlugin({
 
     <meta id="themeColor" name="theme-color" content="#202020">
 
-    <link rel="apple-touch-icon" sizes="180x180" href="/branding/favicons/touchicon.png">
-    <link rel="shortcut icon" href="/branding/favicons/favicon.ico">
-    <meta name="msapplication-TileImage" content="/branding/favicons/touchicon144.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./branding/favicons/touchicon.png">
+    <link rel="shortcut icon" href="./branding/favicons/favicon.ico">
+    <meta name="msapplication-TileImage" content="./branding/favicons/touchicon144.png">
     <meta name="msapplication-TileColor" content="#333333">
 
     <title>Seahawk</title>
@@ -117,6 +118,8 @@ const HTML_PLUGIN = htmlPlugin({
     </style>
 
     <script type="importmap">{"imports":{"date-fns/locale/":"/date-fns/locale/"}}</script>
+
+    ${DEV_MODE ? '<script>new EventSource(\'/esbuild\').addEventListener(\'change\', () => location.reload())</script>' : ''}
 </head>
 <body dir="ltr">
     <div id="reactRoot">
@@ -193,7 +196,7 @@ const DEFINE_PLUGIN = definePlugin({
     __WEBPACK_SERVE__: !!JSON.parse(process.env.WEBPACK_SERVE || '0')
 });
 
-build({
+module.exports = context({
     target: [
         'firefox149',
         'firefox148',
@@ -211,11 +214,13 @@ build({
         { in: './src/apps/experimental/routes/home', out: 'apps/experimental/routes/home' }
     ],
     bundle: true,
-    minify: true,
-    keepNames: true,
+    minify: !DEV_MODE,
+    keepNames: DEV_MODE,
     metafile: true,
-    sourcemap: true,
+    sourcemap: DEV_MODE,
+    logLevel: DEV_MODE ? 'info' : 'warning',
     outdir: 'dist',
+    publicPath: '/web',
     plugins: [
         STRIP_TILDE_PLUGIN,
         SASS_PLUGIN,
