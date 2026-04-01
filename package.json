@@ -135,9 +135,7 @@
     "swiper": "11.2.8",
     "usehooks-ts": "3.1.1",
     "webcomponents.js": "0.7.24",
-    "whatwg-fetch": "3.6.20",
-
-    "cowsay": "1.6.0"
+    "whatwg-fetch": "3.6.20"
   },
   "browserslist": [
     "last 2 Firefox versions",
