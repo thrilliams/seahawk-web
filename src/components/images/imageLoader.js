@@ -3,7 +3,7 @@ import * as lazyLoader from '../lazyLoader/lazyLoaderIntersectionObserver';
 import * as userSettings from '../../scripts/settings/userSettings';
 import './style.scss';
 
-const worker = new Worker('/blurhashworker.js');
+const worker = new Worker('/web/blurhashworker.js');
 const targetDic = {};
 worker.addEventListener(
     'message',
