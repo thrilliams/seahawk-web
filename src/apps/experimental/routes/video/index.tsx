@@ -7,6 +7,14 @@ import AppToolbar from 'components/toolbar/AppToolbar';
 import ViewManagerPage from 'components/viewManager/ViewManagerPage';
 import { EventType } from 'constants/eventType';
 import Events, { type Event } from 'utils/events';
+import { playbackManager } from 'components/playback/playbackmanager';
+import { BaseItemDto, MediaSourceType, PlayerStateInfo } from '@jellyfin/sdk/lib/generated-client/index';
+
+interface PlaybackState {
+    PlayState: PlayerStateInfo,
+    NowPlayingItem?: BaseItemDto,
+    MediaSource: MediaSourceType
+}
 
 /**
  * Video player page component that renders mui controls for the top controls and the legacy view for everything else.
@@ -29,6 +37,15 @@ const VideoPage: FC = () => {
         };
     }, []);
 
+    const [ playbackState, setPlaybackState ] = useState<PlaybackState>();
+
+    useEffect(() => {
+        const player = playbackManager.getCurrentPlayer();
+        if (!player) return;
+        const state = playbackManager.getPlayerState(player);
+        setPlaybackState(state);
+    }, []);
+
     return (
         <>
             <Fade
@@ -48,7 +65,20 @@ const VideoPage: FC = () => {
                         isBackButtonAvailable
                         isUserMenuAvailable={false}
                         buttons={<SyncPlayButton />}
-                    />
+                    >
+                        {
+                            playbackState && <div
+                                style={{ marginLeft: '1em', display: 'flex', gap: '1em' }}
+                            >
+                                {
+                                    playbackState.NowPlayingItem?.Type === 'Episode' && <span>
+                                        S{playbackState.NowPlayingItem?.ParentIndexNumber}:E{playbackState.NowPlayingItem?.IndexNumber}
+                                    </span>
+                                }
+                                {playbackState.NowPlayingItem?.Name && <span>{playbackState.NowPlayingItem?.Name}</span>}
+                            </div>
+                        }
+                    </AppToolbar>
                 </Box>
             </Fade>
 
