@@ -1,5 +1,5 @@
 {
-  "name": "jellyfin-web",
+  "name": "jellyfin-web-",
   "version": "10.11.6",
   "description": "Web interface for Jellyfin",
   "repository": "https://github.com/jellyfin/jellyfin-web",
