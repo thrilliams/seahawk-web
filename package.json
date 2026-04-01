@@ -1,5 +1,5 @@
 {
-  "name": "jellyfin-web-",
+  "name": "jellyfin-web",
   "version": "10.11.6",
   "description": "Web interface for Jellyfin",
   "repository": "https://github.com/jellyfin/jellyfin-web",
@@ -135,7 +135,9 @@
     "swiper": "11.2.8",
     "usehooks-ts": "3.1.1",
     "webcomponents.js": "0.7.24",
-    "whatwg-fetch": "3.6.20"
+    "whatwg-fetch": "3.6.20",
+
+    "cowsay": "1.6.0"
   },
   "browserslist": [
     "last 2 Firefox versions",
