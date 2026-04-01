@@ -117,7 +117,7 @@ const HTML_PLUGIN = htmlPlugin({
         }
     </style>
 
-    <script type="importmap">{"imports":{"date-fns/locale/":"/date-fns/locale/"}}</script>
+    <script type="importmap">{"imports":{"date-fns/locale/":"/web/date-fns/locale/"}}</script>
 
     ${DEV_MODE ? '<script>new EventSource(\'/esbuild\').addEventListener(\'change\', () => location.reload())</script>' : ''}
 </head>
