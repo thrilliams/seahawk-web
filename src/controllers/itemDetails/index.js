@@ -724,6 +724,16 @@ function renderLinks(page, item) {
         links.push(`<a is="emby-linkbutton" class="button-link" href="${item.HomePageUrl}" target="_blank">${globalize.translate('ButtonWebsite')}</a>`);
     }
 
+    const tmdbUrl = item.ExternalUrls.find(url => url.Name === 'TMDB');
+    if (tmdbUrl) {
+        const tmdbMatch = /https:\/\/www\.themoviedb\.org\/(movie|tv)\/(\d+)/.exec(tmdbUrl.Url);
+        if (tmdbMatch) {
+            const [, type, id] = tmdbMatch;
+            item.ExternalUrls.push({ Url: `http://seerr.seahawk.aethre.co/${type}/${id}`, Name: 'SEERR' });
+            if (type === 'movie') item.ExternalUrls.push({ Url: `https://letterboxd.com/tmdb/${id}`, Name: 'Letterboxd' });
+        }
+    }
+
     if (item.ExternalUrls) {
         for (const url of item.ExternalUrls) {
             links.push(`<a is="emby-linkbutton" class="button-link" href="${url.Url}" target="_blank">${escapeHtml(url.Name)}</a>`);
@@ -1102,7 +1112,6 @@ function renderDetails(page, item, apiClient, context) {
         renderLinks(page, item);
     }
 
-    renderTags(page, item);
     renderSeriesAirTime(page, item);
 }
 
@@ -1318,36 +1327,6 @@ function renderSeriesAirTime(page, item) {
         seriesAirTime.classList.remove('hide');
     } else {
         seriesAirTime.classList.add('hide');
-    }
-}
-
-function renderTags(page, item) {
-    const itemTags = page.querySelector('.itemTags');
-    const tagElements = [];
-    let tags = item.Tags || [];
-
-    if (item.Type === 'Program') {
-        tags = [];
-    }
-
-    tags.forEach(tag => {
-        const href = appRouter.getRouteUrl('tag', {
-            tag,
-            serverId: item.ServerId
-        });
-        tagElements.push(
-            `<a href="${href}" class="button-link" is="emby-linkbutton">`
-            + escapeHtml(tag)
-            + '</a>'
-        );
-    });
-
-    if (tagElements.length) {
-        itemTags.innerHTML = globalize.translate('TagsValue', tagElements.join(', '));
-        itemTags.classList.remove('hide');
-    } else {
-        itemTags.innerHTML = '';
-        itemTags.classList.add('hide');
     }
 }
 
