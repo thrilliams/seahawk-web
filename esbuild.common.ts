@@ -1,16 +1,17 @@
-const { context } = require('esbuild');
-const { globSync } = require('fast-glob');
-const { resolve } = require('path');
-const { sassPlugin } = require('esbuild-sass-plugin');
-const { htmlPlugin } = require('@craftamap/esbuild-plugin-html');
-const { copy } = require('esbuild-plugin-copy');
-const packageJson = require('./package.json');
-const { definePlugin } = require('esbuild-plugin-define');
+import { htmlPlugin } from '@craftamap/esbuild-plugin-html';
+import { execSync } from 'child_process';
+import { build, BuildOptions, context, Plugin } from 'esbuild';
+import { copy } from 'esbuild-plugin-copy';
+import { definePlugin } from 'esbuild-plugin-define';
+import { sassPlugin } from 'esbuild-sass-plugin';
+import fg from 'fast-glob';
+import packageJson from './package.json';
 
 const DEV_MODE = process.env.NODE_ENV !== 'production';
 
-const STRIP_TILDE_PLUGIN = {
+const STRIP_TILDE_PLUGIN: Plugin = {
     name: 'strip-tilde',
+    // eslint-disable-next-line @typescript-eslint/no-shadow
     setup(build) {
         // eslint-disable-next-line sonarjs/slow-regex
         build.onResolve({ filter: /~.*\.(woff2|ttf)$/ }, (args) => {
@@ -116,15 +117,11 @@ const HTML_PLUGIN = htmlPlugin({
             left: 0;
         }
     </style>
-
-    <script type="importmap">{"imports":{"date-fns/locale/":"/web/date-fns/locale/"}}</script>
-
-    ${DEV_MODE ? '<script>new EventSource(\'/esbuild\').addEventListener(\'change\', () => location.reload())</script>' : ''}
 </head>
 <body dir="ltr">
     <div id="reactRoot">
         <div class="splashLogo"></div>
-    </div>
+    </div>${DEV_MODE ? "<script>new EventSource('/esbuild').addEventListener('change', () => location.reload())</script>" : ''}
 </body>
 </html>
 `
@@ -146,39 +143,40 @@ const ASSETS = [
 
 const COPY_PLUGIN = copy({
     assets: [
-        { from: resolve(__dirname, 'src/assets/**/*'), to: 'assets' },
-        { from: resolve(__dirname, 'src/branding/**/*'), to: 'branding' },
-        { from: resolve(__dirname, 'src/config.json'), to: 'config.json' },
-        { from: resolve(__dirname, 'src/robots.txt'), to: 'robots.txt' },
-        { from: resolve(__dirname, 'src/branding/favicons/touchicon*.png'), to: 'favicons' },
+        { from: 'src/assets/**/*', to: 'assets' },
+        { from: 'src/branding/**/*', to: 'branding' },
+        { from: 'src/config.json', to: 'config.json' },
+        { from: 'src/robots.txt', to: 'robots.txt' },
+        { from: 'src/branding/favicons/touchicon*.png', to: 'favicons' },
         ...ASSETS.map((asset) => ({
-            from: resolve(__dirname, `node_modules/${asset}`),
+            from: `node_modules/${asset}`,
             to: 'libraries'
         }))
     ]
 });
 
-const THEMES = globSync('themes/**/*.scss', {
-    cwd: resolve(__dirname, 'src')
-}).map((theme) => ({
-    out: theme.substring(0, theme.lastIndexOf('/')) + '/theme',
-    in: `./src/${theme}`
-}));
+const THEMES = fg
+    .globSync('themes/**/*.scss', {
+        cwd: 'src'
+    })
+    .map((theme) => ({
+        out: theme.substring(0, theme.lastIndexOf('/')) + '/theme',
+        in: `src/${theme}`
+    }));
 
-const LOCALES = globSync('date-fns/locale/*/index.js', {
-    cwd: resolve(__dirname, 'node_modules')
-}).map((locale) => ({
-    out: locale.substring(0, locale.lastIndexOf('/')) + '/index',
-    in: `./node_modules/${locale}`
-}));
+const LOCALES = fg
+    .globSync('date-fns/locale/*/index.js', {
+        cwd: 'node_modules'
+    })
+    .map((locale) => ({
+        out: locale.substring(0, locale.lastIndexOf('/')) + '/index',
+        in: `node_modules/${locale}`
+    }));
 
 let COMMIT_SHA = '';
 try {
-    COMMIT_SHA = require('child_process')
-        // eslint-disable-next-line sonarjs/no-os-command-from-path
-        .execSync('git describe --always --dirty')
-        .toString()
-        .trim();
+    // eslint-disable-next-line sonarjs/no-os-command-from-path
+    COMMIT_SHA = execSync('git describe --always --dirty').toString().trim();
 } catch (err) {
     console.warn('Failed to get commit sha. Is git installed?', err);
 }
@@ -196,7 +194,7 @@ const DEFINE_PLUGIN = definePlugin({
     __WEBPACK_SERVE__: !!JSON.parse(process.env.WEBPACK_SERVE || '0')
 });
 
-module.exports = context({
+const BUILD_OPTIONS: BuildOptions = {
     target: [
         'firefox149',
         'firefox148',
@@ -205,29 +203,14 @@ module.exports = context({
         'safari26.4',
         'safari26.3'
     ],
-    entryPoints: [
-        { in: './src/index.jsx', out: 'index' },
-        { in: './src/serviceworker.js', out: 'serviceworker' },
-        { in: './src/components/images/blurhash.worker.ts', out: 'blurhashworker' },
-        ...THEMES,
-        ...LOCALES,
-        { in: './src/apps/experimental/routes/home', out: 'apps/experimental/routes/home' }
-    ],
     bundle: true,
     minify: !DEV_MODE,
     keepNames: DEV_MODE,
     metafile: true,
     sourcemap: DEV_MODE,
     logLevel: DEV_MODE ? 'info' : 'warning',
-    outdir: 'dist',
+    outdir: 'web',
     publicPath: '/web',
-    plugins: [
-        STRIP_TILDE_PLUGIN,
-        SASS_PLUGIN,
-        HTML_PLUGIN,
-        COPY_PLUGIN,
-        DEFINE_PLUGIN
-    ],
     loader: {
         '.png': 'file',
         '.jpg': 'file',
@@ -239,4 +222,31 @@ module.exports = context({
         '.html': 'text',
         '.svg': 'file'
     }
+};
+
+await build({
+    ...BUILD_OPTIONS,
+    format: 'esm',
+    entryPoints: LOCALES
 });
+
+export const ctx = await context({
+    ...BUILD_OPTIONS,
+    plugins: [
+        STRIP_TILDE_PLUGIN,
+        SASS_PLUGIN,
+        COPY_PLUGIN,
+        DEFINE_PLUGIN,
+        HTML_PLUGIN
+    ],
+    entryPoints: [
+        { in: 'src/index.jsx', out: 'index' },
+        { in: 'src/serviceworker.js', out: 'serviceworker' },
+        {
+            in: 'src/components/images/blurhash.worker.ts',
+            out: 'blurhashworker'
+        },
+        ...THEMES
+    ]
+});
+

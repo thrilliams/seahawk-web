@@ -68,7 +68,7 @@ let localeString = DEFAULT_LOCALE;
 let locale = enUS;
 
 export function fetchLocale(localeName: string) {
-    return import(`date-fns/locale/${localeName}/index.js`);
+    return import(`/web/date-fns/locale/${localeName}/index.js`).then(module => module.default);
 }
 
 export function normalizeLocale(localeName: string) {

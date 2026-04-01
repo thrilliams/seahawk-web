@@ -15,6 +15,10 @@ export interface AsyncRoute {
 }
 
 const importRoute = (page: string, type: AppType) => {
+    if (page === '' && type === AppType.Dashboard) {
+        return import(/* webpackChunkName: "[request]" */ '../../apps/dashboard/routes/index');
+    }
+
     try {
         switch (type) {
             case AppType.Dashboard:
