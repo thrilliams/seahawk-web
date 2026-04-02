@@ -5,7 +5,7 @@
  */
 
 import escapeHtml from 'escape-html';
-import 'jquery';
+import jQuery from 'jquery';
 import loading from '../loading/loading';
 import dialogHelper from '../dialogHelper/dialogHelper';
 import dom from '../../utils/dom';
