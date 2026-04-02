@@ -13,6 +13,7 @@ import Queue from '@mui/icons-material/Queue';
 import Quiz from '@mui/icons-material/Quiz';
 import VideoLibrary from '@mui/icons-material/VideoLibrary';
 import Folder from '@mui/icons-material/Folder';
+import AutoStories from '@mui/icons-material/AutoStories';
 import React, { FC } from 'react';
 
 import { MetaView } from '../constants/metaView';
@@ -27,6 +28,8 @@ const LibraryIcon: FC<LibraryIconProps> = ({
     if (item.Id === MetaView.Favorites.Id) {
         return <Favorite />;
     }
+
+    if (item.Name === 'Comics' && item.CollectionType === CollectionType.Books) return <AutoStories />;
 
     switch (item.CollectionType) {
         case CollectionType.Movies:
