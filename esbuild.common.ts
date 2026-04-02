@@ -1,6 +1,6 @@
 import { htmlPlugin } from '@craftamap/esbuild-plugin-html';
 import { execSync } from 'child_process';
-import { build, BuildOptions, context, Plugin } from 'esbuild';
+import { context, Plugin } from 'esbuild';
 import { copy } from 'esbuild-plugin-copy';
 import { definePlugin } from 'esbuild-plugin-define';
 import { sassPlugin } from 'esbuild-sass-plugin';
@@ -11,7 +11,6 @@ const DEV_MODE = process.env.NODE_ENV !== 'production';
 
 const STRIP_TILDE_PLUGIN: Plugin = {
     name: 'strip-tilde',
-    // eslint-disable-next-line @typescript-eslint/no-shadow
     setup(build) {
         // eslint-disable-next-line sonarjs/slow-regex
         build.onResolve({ filter: /~.*\.(woff2|ttf)$/ }, (args) => {
@@ -194,7 +193,7 @@ const DEFINE_PLUGIN = definePlugin({
     __WEBPACK_SERVE__: !!JSON.parse(process.env.WEBPACK_SERVE || '0')
 });
 
-const BUILD_OPTIONS: BuildOptions = {
+export const ctx = await context({
     target: [
         'firefox149',
         'firefox148',
@@ -221,17 +220,7 @@ const BUILD_OPTIONS: BuildOptions = {
         '.ttf': 'file',
         '.html': 'text',
         '.svg': 'file'
-    }
-};
-
-await build({
-    ...BUILD_OPTIONS,
-    format: 'esm',
-    entryPoints: LOCALES
-});
-
-export const ctx = await context({
-    ...BUILD_OPTIONS,
+    },
     plugins: [
         STRIP_TILDE_PLUGIN,
         SASS_PLUGIN,
@@ -242,11 +231,9 @@ export const ctx = await context({
     entryPoints: [
         { in: 'src/index.jsx', out: 'index' },
         { in: 'src/serviceworker.js', out: 'serviceworker' },
-        {
-            in: 'src/components/images/blurhash.worker.ts',
-            out: 'blurhashworker'
-        },
-        ...THEMES
+        { in: 'src/components/images/blurhash.worker.ts', out: 'blurhashworker' },
+        ...THEMES,
+        ...LOCALES
     ]
 });
 
