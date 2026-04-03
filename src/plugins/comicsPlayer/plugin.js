@@ -361,7 +361,6 @@ class ComicSource {
     constructor(item) {
         this.item = item;
         this.apiClient = ServerConnections.getApiClient(item.ServerId);
-        this.objectUrls = [];
     }
 
     async getSlides() {
@@ -373,8 +372,7 @@ class ComicSource {
     }
 
     release() {
-        /* eslint-disable-next-line compat/compat */
-        this.objectUrls.forEach(URL.revokeObjectURL);
+        throw new Error('not implemented');
     }
 
     static async constructAppropriateSource(item) {
@@ -436,75 +434,62 @@ class ArchiveSource extends ComicSource {
     </div>
 </div>`;
     }
+
+    release() {
+        /* eslint-disable-next-line compat/compat */
+        this.objectUrls.forEach(URL.revokeObjectURL);
+    }
 }
 
 class StreamingSource extends ComicSource {
-    #wrapPromise(promise) {
-        if (promise.state) return promise;
-        let state = ['pending'];
-
-        const result = promise.then(
-            value => {
-                state = ['resolved', value];
-                return value;
-            },
-            error => {
-                state = ['rejected', error];
-                throw error;
-            }
-        );
-
-        result.state = () => state;
-        return result;
-    }
-
     async getSlides(currentSlide = 0) {
+        this.objectUrls = {};
+
         const response = await this.apiClient.get(this.apiClient.getUrl(`/Items/${this.item.Id}/Pages`));
         const { pageCount } = await response.json();
 
-        this.pageRequests = [];
+        this.pageUrls = [];
         for (let i = 0; i < pageCount; i++) {
-            let pageIndex = i + currentSlide;
-            if (pageIndex >= pageCount) pageIndex -= pageCount;
-
-            const pageRequest = this.apiClient
-                .get(this.apiClient.getUrl(`/Items/${this.item.Id}/Pages/${pageIndex}`))
-                .then(page => page.blob());
-
-            const wrappedPageRequest = this.#wrapPromise(pageRequest);
-            this.pageRequests[pageIndex] = wrappedPageRequest;
+            this.pageUrls.push(this.apiClient.getUrl(`/Items/${this.item.Id}/Pages/${i}`));
         }
 
-        await this.pageRequests[currentSlide];
-        return this.pageRequests;
-    }
-
-    #createImageElt(zoomElt, blob) {
-        const imgElt = document.createElement('img');
-        imgElt.className = 'swiper-slide-img';
-        // eslint-disable-next-line compat/compat
-        const objectUrl = URL.createObjectURL(blob);
-        this.objectUrls.push(objectUrl);
-        imgElt.src = objectUrl;
-        zoomElt.appendChild(imgElt);
+        await this.pageUrls[currentSlide];
+        return this.pageUrls;
     }
 
     renderSlide(slide) {
-        const [state, valueOrError] = slide.state();
-
         const slideElt = document.createElement('div');
         slideElt.className = 'swiper-slide';
         const zoomElt = document.createElement('div');
         zoomElt.className = 'slider-zoom-container';
         slideElt.appendChild(zoomElt);
 
-        if (state === 'pending') {
-            slide.then(this.#createImageElt.bind(this, zoomElt));
-            return slideElt;
-        }
+        const spinnerElt = document.createElement('div');
+        spinnerElt.setAttribute('dir', 'ltr');
+        spinnerElt.className = 'docspinner mdl-spinner mdlSpinnerActive';
+        spinnerElt.innerHTML = '<div class="mdl-spinner__layer mdl-spinner__layer-1"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-2"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-3"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-4"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div>';
+        zoomElt.appendChild(spinnerElt);
 
-        this.#createImageElt(zoomElt, valueOrError);
+        this.apiClient.get(slide)
+            .then(response => response.blob())
+            .then(blob => {
+                const imgElt = document.createElement('img');
+                imgElt.className = 'swiper-slide-img';
+                // eslint-disable-next-line compat/compat
+                const objectUrl = URL.createObjectURL(blob);
+                this.objectUrls[slide] = objectUrl;
+                imgElt.src = objectUrl;
+
+                spinnerElt.remove();
+                zoomElt.appendChild(imgElt);
+            });
+
         return slideElt;
+    }
+
+    release() {
+        // eslint-disable-next-line compat/compat
+        Object.values(this.objectUrls).forEach(URL.revokeObjectURL);
     }
 }
 
