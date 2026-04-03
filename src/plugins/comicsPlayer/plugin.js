@@ -49,7 +49,7 @@ export class ComicsPlayer {
         const mediaSourceId = this.item.Id;
         userSettings.setComicsPlayerSettings(this.comicsPlayerSettings, mediaSourceId);
 
-        this.archiveSource?.release();
+        this.source?.release();
 
         const elem = this.mediaElement;
         if (elem) {
@@ -287,27 +287,21 @@ export class ComicsPlayer {
 
         loading.show();
 
-        const serverId = item.ServerId;
-        const apiClient = ServerConnections.getApiClient(serverId);
-
-        Archive.init({
-            workerUrl: appRouter.baseUrl() + '/libraries/worker-bundle.js'
-        });
-
-        const downloadUrl = apiClient.getItemDownloadUrl(item.Id);
-        this.archiveSource = new ArchiveSource(downloadUrl);
-
         //eslint-disable-next-line import/no-unresolved
         import('swiper/css/bundle');
 
-        return this.archiveSource.load()
+        return ComicSource.constructAppropriateSource(this.item).then(source => {
+            this.source = source;
             // eslint-disable-next-line import/no-unresolved
-            .then(() => import('swiper/bundle'))
-            .then(({ Swiper }) => {
-                loading.hide();
-
-                this.pageCount = this.archiveSource.urls.length;
+            return import('swiper/bundle');
+        })
+            .then(async ({ Swiper }) => {
                 this.currentPage = options.startPositionTicks / 10000 || 0;
+
+                const slides = await this.source.getSlides(this.currentPage);
+                const renderSlide = this.source.renderSlide.bind(this.source);
+
+                loading.hide();
 
                 this.swiperInstance = new Swiper(elem.querySelector('.slideshowSwiperContainer'), {
                     direction: 'horizontal',
@@ -338,9 +332,9 @@ export class ComicsPlayer {
                     },
                     // reduces memory consumption for large libraries while allowing preloading of images
                     virtual: {
-                        slides: this.archiveSource.urls,
+                        slides,
                         cache: true,
-                        renderSlide: this.getImgFromUrl,
+                        renderSlide,
                         addSlidesBefore: 1,
                         addSlidesAfter: 1
                     }
@@ -354,14 +348,6 @@ export class ComicsPlayer {
             });
     }
 
-    getImgFromUrl(url) {
-        return `<div class="swiper-slide">
-                   <div class="slider-zoom-container">
-                       <img src="${url}" class="swiper-slide-img">
-                   </div>
-               </div>`;
-    }
-
     canPlayMediaType(mediaType) {
         return (mediaType || '').toLowerCase() === 'book';
     }
@@ -371,33 +357,61 @@ export class ComicsPlayer {
     }
 }
 
-class ArchiveSource {
-    constructor(url) {
-        this.url = url;
-        this.files = [];
-        this.urls = [];
+class ComicSource {
+    constructor(item) {
+        this.item = item;
+        this.apiClient = ServerConnections.getApiClient(item.ServerId);
+        this.objectUrls = [];
     }
 
-    async load() {
-        const res = await fetch(this.url);
+    async getSlides() {
+        throw new Error('not implemented');
+    }
+
+    renderSlide() {
+        throw new Error('not implemented');
+    }
+
+    release() {
+        /* eslint-disable-next-line compat/compat */
+        this.objectUrls.forEach(URL.revokeObjectURL);
+    }
+
+    static async constructAppropriateSource(item) {
+        try {
+            const apiClient = ServerConnections.getApiClient(item.ServerId);
+            await apiClient.get(apiClient.getUrl('/System/ComicStreaming'));
+            return new StreamingSource(item);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (e) {
+            return new ArchiveSource(item);
+        }
+    }
+}
+
+class ArchiveSource extends ComicSource {
+    async getSlides() {
+        Archive.init({
+            workerUrl: appRouter.baseUrl() + '/libraries/worker-bundle.js'
+        });
+
+        const downloadUrl = this.apiClient.getItemDownloadUrl(this.item.Id);
+
+        const res = await fetch(downloadUrl);
         if (!res.ok) {
             return;
         }
 
         const blob = await res.blob();
-        this.archive = await Archive.open(blob);
-        this.raw = await this.archive.getFilesArray();
-        await this.archive.extractFiles();
-
-        let files = await this.archive.getFilesArray();
+        const archive = await Archive.open(blob);
+        await archive.extractFiles();
 
         // metadata files and files without a file extension should not be considered as a page
-        files = files.filter((file) => {
+        const files = (await archive.getFilesArray()).filter((file) => {
             const name = file.file.name;
             const index = name.lastIndexOf('.');
             return index !== -1 && IMAGE_FORMATS.includes(name.slice(index + 1).toLowerCase());
-        });
-        files.sort((a, b) => {
+        }).sort((a, b) => {
             if (a.file.name < b.file.name) {
                 return -1;
             } else {
@@ -405,18 +419,92 @@ class ArchiveSource {
             }
         });
 
+        this.objectUrls = [];
         for (const file of files) {
             /* eslint-disable-next-line compat/compat */
             const url = URL.createObjectURL(file.file);
-            this.urls.push(url);
+            this.objectUrls.push(url);
         }
+
+        return this.objectUrls;
     }
 
-    release() {
-        this.files = [];
-        /* eslint-disable-next-line compat/compat */
-        this.urls.forEach(URL.revokeObjectURL);
-        this.urls = [];
+    renderSlide(slide) {
+        return `<div class="swiper-slide">
+    <div class="slider-zoom-container">
+        <img src="${slide}" class="swiper-slide-img">
+    </div>
+</div>`;
+    }
+}
+
+class StreamingSource extends ComicSource {
+    #wrapPromise(promise) {
+        if (promise.state) return promise;
+        let state = ['pending'];
+
+        const result = promise.then(
+            value => {
+                state = ['resolved', value];
+                return value;
+            },
+            error => {
+                state = ['rejected', error];
+                throw error;
+            }
+        );
+
+        result.state = () => state;
+        return result;
+    }
+
+    async getSlides(currentSlide = 0) {
+        const response = await this.apiClient.get(this.apiClient.getUrl(`/Items/${this.item.Id}/Pages`));
+        const { pageCount } = await response.json();
+
+        this.pageRequests = [];
+        for (let i = 0; i < pageCount; i++) {
+            let pageIndex = i + currentSlide;
+            if (pageIndex >= pageCount) pageIndex -= pageCount;
+
+            const pageRequest = this.apiClient
+                .get(this.apiClient.getUrl(`/Items/${this.item.Id}/Pages/${pageIndex}`))
+                .then(page => page.blob());
+
+            const wrappedPageRequest = this.#wrapPromise(pageRequest);
+            this.pageRequests[pageIndex] = wrappedPageRequest;
+        }
+
+        await this.pageRequests[currentSlide];
+        return this.pageRequests;
+    }
+
+    #createImageElt(zoomElt, blob) {
+        const imgElt = document.createElement('img');
+        imgElt.className = 'swiper-slide-img';
+        // eslint-disable-next-line compat/compat
+        const objectUrl = URL.createObjectURL(blob);
+        this.objectUrls.push(objectUrl);
+        imgElt.src = objectUrl;
+        zoomElt.appendChild(imgElt);
+    }
+
+    renderSlide(slide) {
+        const [state, valueOrError] = slide.state();
+
+        const slideElt = document.createElement('div');
+        slideElt.className = 'swiper-slide';
+        const zoomElt = document.createElement('div');
+        zoomElt.className = 'slider-zoom-container';
+        slideElt.appendChild(zoomElt);
+
+        if (state === 'pending') {
+            slide.then(this.#createImageElt.bind(this, zoomElt));
+            return slideElt;
+        }
+
+        this.#createImageElt(zoomElt, valueOrError);
+        return slideElt;
     }
 }
 
