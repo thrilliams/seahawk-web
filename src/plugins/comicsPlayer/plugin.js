@@ -287,17 +287,17 @@ export class ComicsPlayer {
 
         loading.show();
 
-        //eslint-disable-next-line import/no-unresolved
-        import('swiper/css/bundle');
-
-        return ComicSource.constructAppropriateSource(this.item).then(source => {
-            this.source = source;
+        return Promise.all([
+            ComicSource.constructAppropriateSource(this.item),
             // eslint-disable-next-line import/no-unresolved
-            return import('swiper/bundle');
-        })
-            .then(async ({ Swiper }) => {
+            import('swiper/bundle'),
+            // eslint-disable-next-line import/no-unresolved
+            import('swiper/css/bundle')
+        ])
+            .then(async ([source, { Swiper }]) => {
                 this.currentPage = options.startPositionTicks / 10000 || 0;
 
+                this.source = source;
                 const slides = await this.source.getSlides(this.currentPage);
                 const renderSlide = this.source.renderSlide.bind(this.source);
 
@@ -340,10 +340,13 @@ export class ComicsPlayer {
                     }
                 });
 
-                // save current page ( a page is an image file inside the archive )
+                // save current page & release unrendered pages when streaming
                 this.swiperInstance.on('slideChange', () => {
                     this.currentPage = this.swiperInstance.activeIndex;
                     Events.trigger(this, 'pause');
+
+                    const activeSlides = slides.slice(Math.max(0, this.currentPage - 1), this.currentPage + 2);
+                    this.source.onSlidesChange(activeSlides);
                 });
             });
     }
@@ -363,18 +366,6 @@ class ComicSource {
         this.apiClient = ServerConnections.getApiClient(item.ServerId);
     }
 
-    async getSlides() {
-        throw new Error('not implemented');
-    }
-
-    renderSlide() {
-        throw new Error('not implemented');
-    }
-
-    release() {
-        throw new Error('not implemented');
-    }
-
     static async constructAppropriateSource(item) {
         try {
             const apiClient = ServerConnections.getApiClient(item.ServerId);
@@ -385,6 +376,18 @@ class ComicSource {
             return new ArchiveSource(item);
         }
     }
+
+    // eslint-disable-next-line no-empty-function
+    async getSlides() {}
+
+    // eslint-disable-next-line no-empty-function
+    renderSlide() {}
+
+    // eslint-disable-next-line no-empty-function
+    release() {}
+
+    // eslint-disable-next-line no-empty-function, @typescript-eslint/no-unused-vars
+    onSlidesChange(activeSlides) {}
 }
 
 class ArchiveSource extends ComicSource {
@@ -457,12 +460,24 @@ class StreamingSource extends ComicSource {
         return this.pageUrls;
     }
 
+    renderImage(zoomElt, objectUrl) {
+        const imgElt = document.createElement('img');
+        imgElt.className = 'swiper-slide-img';
+        imgElt.src = objectUrl;
+        zoomElt.appendChild(imgElt);
+    }
+
     renderSlide(slide) {
         const slideElt = document.createElement('div');
         slideElt.className = 'swiper-slide';
         const zoomElt = document.createElement('div');
         zoomElt.className = 'slider-zoom-container';
         slideElt.appendChild(zoomElt);
+
+        if (slide in this.objectUrls) {
+            this.renderImage(zoomElt, this.objectUrls[slide]);
+            return slideElt;
+        }
 
         const spinnerElt = document.createElement('div');
         spinnerElt.setAttribute('dir', 'ltr');
@@ -473,15 +488,11 @@ class StreamingSource extends ComicSource {
         this.apiClient.get(slide)
             .then(response => response.blob())
             .then(blob => {
-                const imgElt = document.createElement('img');
-                imgElt.className = 'swiper-slide-img';
                 // eslint-disable-next-line compat/compat
                 const objectUrl = URL.createObjectURL(blob);
                 this.objectUrls[slide] = objectUrl;
-                imgElt.src = objectUrl;
-
+                this.renderImage(zoomElt, objectUrl);
                 spinnerElt.remove();
-                zoomElt.appendChild(imgElt);
             });
 
         return slideElt;
@@ -490,6 +501,15 @@ class StreamingSource extends ComicSource {
     release() {
         // eslint-disable-next-line compat/compat
         Object.values(this.objectUrls).forEach(URL.revokeObjectURL);
+    }
+
+    onSlidesChange(activeSlides) {
+        for (const slide in this.objectUrls) {
+            if (!activeSlides.includes(slide)) {
+                URL.revokeObjectURL(this.objectUrls[slide]);
+                delete this.objectUrls[slide];
+            }
+        }
     }
 }
 
